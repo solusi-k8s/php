@@ -578,6 +578,9 @@ function processExecveData($row) {
         '/usr/local/bin/php -q /app/parse.audit.php /tmp/tmp',
         'rm -vf /tmp/tmp',
         'wc -l /var/log/nginx/apm.access.log',
+        '/bin/sh /usr/bin/lesspipe',
+        'basename /usr/bin/lesspipe',
+        'dirname /usr/bin/lesspipe',
     ];
     $excludeCommandData = array_merge($excludeCommandDefault, $excludeCommand);
     if (in_array($data['command'], $excludeCommandData)) {

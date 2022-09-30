@@ -1,5 +1,5 @@
 #!/bin/bash
-version="v1.0.2"
+version="v1.0.3"
 filename=$1
 sleep="10s"
 total_line=500
