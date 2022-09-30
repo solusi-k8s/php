@@ -56,11 +56,21 @@ function createTableAudit() {
     $sql = "
     drop table audit_log;
     drop table login_log;
+    CREATE TABLE IF NOT EXISTS user_server(
+        id  BIGSERIAL PRIMARY KEY,
+        server varchar(255),
+        user_id varchar(100),
+        group_id varchar(100),
+        user_name varchar(255),
+        group_name varchar(255) null,
+        CONSTRAINT UK_UserServer_ServerUserId UNIQUE (server, user_id)
+    );
     CREATE TABLE IF NOT EXISTS audit_log(
         id varchar(100) PRIMARY KEY,
         server varchar(255),
         time int8,
         line int8,
+        is_system int2 default 0,
         type varchar(255),
         total int8,
         data json null,
@@ -76,6 +86,7 @@ function createTableAudit() {
         program varchar(1000) null,
         command varchar(1000) null
     );
+    -- ALTER TABLE audit_log ADD COLUMN is_system int default 0 null;
     CREATE INDEX IDX_AuditLog_Time ON audit_log (time ASC NULLS LAST);
 
     CREATE TABLE IF NOT EXISTS login_log(
@@ -140,6 +151,7 @@ function insertAuditLog($data) {
             'server',
             'time' ,
             'line' ,
+            'is_system',
             'type' ,
             'total' ,
             'data' ,
@@ -159,6 +171,9 @@ function insertAuditLog($data) {
             if (is_array($data['data'])) {
                 $data['data'] = json_encode($data['data']);
             }
+        }
+        if (!isset($data['is_system'])) {
+            $data['is_system'] = 0;
         }
         $result = insertData("audit_log", $fields, $data);
         #msg("result insert : " . var_export($result, true));
@@ -219,7 +234,7 @@ function insertData($table, $fields, $data) {
     }
     $_values = implode(',', $values);
     $sql = "INSERT INTO $table ($_fields) VALUES($_values);";
-    #msg("sql : " . $sql);
+    //msg("sql : " . $sql);
     $stmt= $pdo->prepare($sql);
     $datas = [];
     foreach($fields as $k=>$v) {
@@ -274,6 +289,26 @@ function getLoginLog($where, $time,$whereOperator = 'AND') {
     $data = $stmt->fetch();
     return $data;
 }
+function getUserServer($where, $limit = 1, $whereOperator = 'AND') {
+    $pdo = dbConnect();
+    $whereStr = [];
+    foreach($where as $k=>$v) {
+        $whereStr[] = $k .'=:w_'.$k;
+    }
+    $_whereStr = implode(' '.$whereOperator.' ', $whereStr);
+    $sql = "select * from user_server where $_whereStr LIMIT " . $limit;
+    //msg($sql);
+    $stmt= $pdo->prepare($sql);
+    $datas = [];
+    foreach($where as $k=>$v) {
+        $datas['w_'.$k] = $v;
+    }
+    //msg($datas);
+    $stmt->execute($datas);
+    $data = $stmt->fetch();
+    return $data;
+}
+
 
 function timePlural($value, $unit)
 {

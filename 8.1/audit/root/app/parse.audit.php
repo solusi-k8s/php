@@ -1,6 +1,9 @@
 #!/usr/local/bin/php -q
 <?php
 function msg($msg) {
+    if (is_array($msg)) {
+        $msg = json_encode($msg);
+    }
     echo "[".date("r")."] : " . $msg . PHP_EOL;
 }
 if (empty($argv[1])) {
@@ -15,21 +18,30 @@ if (!file_exists($filename)) {
 $cfg = __DIR__ .  '/cfg.inc.php';
 $excludeProgam = [];
 $excludeCommand = [];
+$filepasswd = "/etc/passwd";
+$filegroup = "/etc/group";
 
 if (file_exists($cfg)) {
     include $cfg;
 }
 defined('HOSTNAMETRIM') || define('HOSTNAMETRIM','monitoring_audit-extractor');
 
+//echo HOSTNAMETRIM;exit;
+
 $hostname = gethostname();
 if (!empty($argv[2])) {
     $hostname = $argv[2];
 }
 
+//echo $hostname; exit;
+
 $hostname = trim($hostname, HOSTNAMETRIM);
 
 
 include __DIR__ . '/' . 'pgsql.lib.php';
+
+processUserSystem();
+// exit;
 
 if ($file = fopen($filename, "r")) {
     $lineNumber = 0;
@@ -137,6 +149,63 @@ if ($file = fopen($filename, "r")) {
     // print_r($finalResult);
     //echo PHP_EOL;
     processFinal($finalResult);
+}
+
+function processUserSystem() {
+    global $hostname, $filepasswd, $filegroup;
+    $userServerField = [
+        //'id',
+        'server',
+        'user_id',
+        'group_id',
+        'user_name',
+        'group_name',
+    ];
+    if ($file = fopen($filepasswd, "r")) {
+        $lineNumber = 0;
+        $finalResult = [];
+        while(!feof($file)) {
+            $lineNumber++;
+            $line = fgets($file);
+            $lines = explode(':', $line);
+            if (count($lines) < 5) {
+                continue;
+            }
+            //print_r($lines);
+            $data = [];
+            $data['server'] = $hostname;
+            $data['user_name'] = $lines[0];
+            $data['user_id'] = $lines[2];
+            $data['group_id'] = $lines[3];
+            $dataWhere = [];
+            $dataWhere['server'] = $hostname;
+            $dataWhere['user_name'] = $lines[0];
+            $dataWhere['user_id'] = $lines[2];
+            $userData = getUserServer($dataWhere);
+            if ($userData === false) {
+                insertData('user_server', $userServerField, $data);
+            }
+        }
+    }
+    if ($file = fopen($filegroup, "r")) {
+        $lineNumber = 0;
+        $finalResult = [];
+        while(!feof($file)) {
+            $lineNumber++;
+            $line = fgets($file);
+            $lines = explode(':', $line);
+            if (count($lines) < 3) {
+                continue;
+            }
+            $dataWhere = [];
+            $dataWhere['server'] = $hostname;
+            $dataWhere['group_id'] = $lines[2];
+            $data = [];
+            $data['group_name'] = $lines[0];
+            updateData('user_server', $dataWhere, $data);
+        }
+    }
+
 }
 function processExecve($hash,$time,$procLine,$process, $raw) {
     #echo "process : ${process}" . PHP_EOL;
@@ -523,15 +592,43 @@ function processExecveData($row) {
     $dataWhere = [];
     $dataWhere['server'] = $hostname;
 
-    $dataWhere['uid'] = $data['data']['auid'];
-    $dataWhere['session'] = $data['data']['ses'];
-    $dataWhere['pid'] = $data['data']['pid'];
+    $dataWhere['uid'] = $row0['data']['auid'];
+    $dataWhere['session'] = $row0['data']['ses'];
+    $dataWhere['pid'] = $row0['data']['pid'];
  
 
     $loginData = getLoginLog($dataWhere, $data['time']);
     if (!empty($loginData['time'])) {
         $data['username'] = $loginData['username'];
     }
+    if (empty($data['username'])) {
+        $userData = getUserServer(['server'=>$hostname, 'user_id' => $data['uid']]);
+        if (isset($userData['user_name'])) {
+            $data['username'] = $userData['user_name'];
+        }
+    }
+    //check "tty": "(none)",
+    if (isset($row0['data']['tty']) && $row0['data']['tty'] == '(none)') {
+        $data['is_system'] = 1;
+
+    }
+    //command = "-bash"
+    //check "tty": "(none)",
+    $commandList = [
+        '-bash',
+        '/usr/bin/locale-check C.UTF-8'
+    ];
+    if (isset($row1['command']) && in_array($row1['command'],$commandList)) {
+        $data['is_system'] = 1;
+    }
+
+    // if ($data['id'] == 'd83f3afcb52d0c9950f0db66e5e76b1cb2dfe4ac424aac03b8eadbd5b553d8c5') {
+    //     echo "test";
+    //     print_r($data);
+    //     echo "kelluar";
+    //     exit;
+    // }
+
 
 
 

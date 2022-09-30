@@ -1,2 +1,3 @@
 /root/app/*.log
 /root/app/*.json
+/root/app/cfg.inc.php

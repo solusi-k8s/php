@@ -1,4 +1,5 @@
 #!/bin/bash
+version="v1.0.2"
 filename=$1
 sleep="10s"
 total_line=500
@@ -45,20 +46,20 @@ while [ 1 ]; do
     tmpfile=$(mktemp)
     line_after=$(wc -l ${filename} | awk '{print $1}')
     line_compare=$(( line_after - line_before ))
-    echo "[$(date)] : line_before=${line_before} line_after=${line_after} line_compare=${line_compare}"
+    echo "[$(date)] : $version : line_before=${line_before} line_after=${line_after} line_compare=${line_compare}"
 
     if [ "$first" = "1" ]; then
-      echo "[$(date)] : start process apm log to tmpfile=${tmpfile} from original"
-      echo -n "[$(date)] : "
+      echo "[$(date)] : $version : start process apm log to tmpfile=${tmpfile} from original"
+      echo -n "[$(date)] : $version : "
       cp -vf ${filename} ${tmpfile}
     else
       if [ $line_compare -ge 0 ]; then
         line_tail=$((line_compare + ${total_line}))
-        echo "[$(date)] : start process apm log to tmpfile=${tmpfile} with line_tail=${line_tail}"
+        echo "[$(date)] : $version : start process apm log to tmpfile=${tmpfile} with line_tail=${line_tail}"
         tail -n ${line_tail} ${filename} > ${tmpfile}
       else
-        echo "[$(date)] : start process apm log to tmpfile=${tmpfile} with full"
-        echo -n "[$(date)] : "
+        echo "[$(date)] : $version : start process apm log to tmpfile=${tmpfile} with full"
+        echo -n "[$(date)] : $version : "
         cp -vf ${filename} ${tmpfile}
       fi
     fi
@@ -67,10 +68,10 @@ while [ 1 ]; do
 
     ${PRGDIR}/parse.audit.php ${tmpfile} ${HOSTNAME}
 
-    echo -n "[$(date)] : "
+    echo -n "[$(date)] : $version : "
     rm -vf ${tmpfile}
 
-    echo "[$(date)] : end process apm log to tmpfile=${tmpfile}"
-    echo "[$(date)] : sleep ${sleep}"
+    echo "[$(date)] : $version : end process apm log to tmpfile=${tmpfile}"
+    echo "[$(date)] : $version : sleep ${sleep}"
     sleep ${sleep};
 done
