@@ -3,7 +3,7 @@ FROM solusik8s/php:8.1-cli
 LABEL Component="php" \
       Name="solusik8s/php" \
       Version="8.1-audit" \
-      Release="1"
+      Release="2"
 
 
 COPY ./root/app /app

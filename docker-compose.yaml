@@ -1,6 +1,11 @@
 # vim:ft=ansible:
 version: '3'
 services:
+  php74-fpm:
+    build:
+      context: ./7.4/fpm/
+      dockerfile: Dockerfile
+    image: solusik8s/php:7.4-fpm
   php81-cli:
     build:
       context: ./8.1/cli/
@@ -15,7 +20,7 @@ services:
     build:
       context: ./8.1/audit/
       dockerfile: Dockerfile
-    image: solusik8s/php:8.1-audit
+    image: solusik8s/php:8.1-audit.R2
   php81-ubuntu2204:
     build:
       context: ./8.1/ubuntu-22.04/

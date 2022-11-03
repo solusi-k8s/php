@@ -32,10 +32,14 @@ $hostname = gethostname();
 if (!empty($argv[2])) {
     $hostname = $argv[2];
 }
+msg("hostname before : " . $hostname );
 
 //echo $hostname; exit;
-
-$hostname = trim($hostname, HOSTNAMETRIM);
+$hostnamereplaces = explode('|', HOSTNAMETRIM);
+foreach($hostnamereplaces as $hostnamereplace) {
+    $hostname = str_replace($hostnamereplace,'',$hostname);
+}
+msg("hostname : " . $hostname );
 
 
 include __DIR__ . '/' . 'pgsql.lib.php';

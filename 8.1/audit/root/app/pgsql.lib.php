@@ -88,6 +88,12 @@ function createTableAudit() {
     );
     -- ALTER TABLE audit_log ADD COLUMN is_system int default 0 null;
     CREATE INDEX IDX_AuditLog_Time ON audit_log (time ASC NULLS LAST);
+    CREATE INDEX IDX_AuditLog_IDX01 ON audit_log (time,is_system, type,uid);
+    CREATE INDEX IDX_AuditLog_IsSytem ON audit_log (is_system);
+    CREATE INDEX IDX_AuditLog_Type ON audit_log (type);
+    CREATE INDEX IDX_AuditLog_Uid ON audit_log (uid);
+    CREATE INDEX IDX_AuditLog_Session ON audit_log (session);
+
 
     CREATE TABLE IF NOT EXISTS login_log(
         id varchar(100) PRIMARY KEY,
@@ -108,6 +114,38 @@ function createTableAudit() {
         duration_title varchar(1000) null
     );
     CREATE INDEX IDX_LoginTime_Time ON login_log (time ASC NULLS LAST);
+    CREATE INDEX IDX_LoginTime_Server ON login_log (server);
+    CREATE INDEX IDX_LoginTime_Uid ON login_log (uid);
+    CREATE INDEX IDX_LoginTime_Session ON login_log (session);
+    CREATE INDEX IDX_LoginTime_Address ON login_log (address);
+
+    CREATE TABLE IF NOT EXISTS audit_log_system(
+        id varchar(100) PRIMARY KEY,
+        server varchar(255),
+        time int8,
+        line int8,
+        is_system int2 default 0,
+        type varchar(255),
+        total int8,
+        data json null,
+        uid int8 null,
+        gid int8 null,
+        session int8 null,
+        pid int8 null,
+        username varchar(1000) null,
+        hostname varchar(1000) null,
+        address varchar(1000) null,
+        terminal varchar(1000) null,
+        response varchar(1000) null,
+        program varchar(1000) null,
+        command varchar(1000) null
+    );
+    CREATE INDEX IDX_AuditLogSystem_Time ON audit_log_system (time ASC NULLS LAST);
+    CREATE INDEX IDX_AuditLogSystem_IDX01 ON audit_log_system (time,is_system, type,uid);
+    CREATE INDEX IDX_AuditLogSystem_IsSytem ON audit_log_system (is_system);
+    CREATE INDEX IDX_AuditLogSystem_Type ON audit_log_system (type);
+    CREATE INDEX IDX_AuditLogSystem_Uid ON audit_log_system (uid);
+    CREATE INDEX IDX_AuditLogSystem_Session ON audit_log_system (session);
 
     ";
 }
@@ -144,7 +182,13 @@ function insertNgixLog($data) {
 }
 function insertAuditLog($data) {
     #msg("start : process data : " . $data['id']);
-    $row = getDataById("audit_log", $data['id']);
+    $row = false;
+    if (!empty($data['is_system'])) {
+        $row = getDataById("audit_log_system", $data['id']);
+    } else {
+        $row = getDataById("audit_log", $data['id']);
+    }
+
     if ($row === false) {
         $fields = [
             'id' ,
@@ -175,7 +219,11 @@ function insertAuditLog($data) {
         if (!isset($data['is_system'])) {
             $data['is_system'] = 0;
         }
-        $result = insertData("audit_log", $fields, $data);
+        if (!empty($data['is_system'])) {
+            $result = insertData("audit_log_system", $fields, $data);
+        } else {
+            $result = insertData("audit_log", $fields, $data);
+        }
         #msg("result insert : " . var_export($result, true));
     } else {
         #msg("data already exists : " . $data['id']);
